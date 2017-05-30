@@ -1,13 +1,14 @@
 package ginlogrus
 
 import (
-	"fmt"
 	"math"
 	"os"
 	"time"
+	"io/ioutil"
+	"github.com/pkg/errors"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/gin-gonic/gin"
+	"gopkg.in/gin-gonic/gin.v1"
 )
 
 // 2016-09-27 09:38:21.541541811 +0200 CEST
@@ -16,7 +17,7 @@ import (
 // "http://www.example.com/start.html"
 // "Mozilla/4.08 [en] (Win98; I ;Nav)"
 
-var timeFormat = "02/Jan/2006:15:04:05 -0700"
+var timeFormat = "2006-01-02T15:04:05-0700"
 
 // Logger is the logrus logger handler
 func Logger(log *logrus.Logger) gin.HandlerFunc {
@@ -29,15 +30,15 @@ func Logger(log *logrus.Logger) gin.HandlerFunc {
 		latency := int(math.Ceil(float64(stop.Nanoseconds()) / 1000.0))
 		statusCode := c.Writer.Status()
 		clientIP := c.ClientIP()
-		clientUserAgent := c.Request.UserAgent()
+		//clientUserAgent := c.Request.UserAgent()
 		referer := c.Request.Referer()
 		hostname, err := os.Hostname()
 		if err != nil {
 			hostname = "unknow"
 		}
-		dataLength := c.Writer.Size()
-		if dataLength < 0 {
-			dataLength = 0
+		responseDataLength := c.Writer.Size()
+		if responseDataLength < 0 {
+			responseDataLength = 0
 		}
 
 		entry := logrus.NewEntry(log).WithFields(logrus.Fields{
@@ -48,14 +49,22 @@ func Logger(log *logrus.Logger) gin.HandlerFunc {
 			"method":     c.Request.Method,
 			"path":       path,
 			"referer":    referer,
-			"dataLength": dataLength,
-			"userAgent":  clientUserAgent,
+			"dataLength": responseDataLength,
+			"at": c.Keys["at"],
+			//"userAgent":  clientUserAgent,
 		})
 
 		if len(c.Errors) > 0 {
-			entry.Error(c.Errors.ByType(gin.ErrorTypePrivate).String())
+			requestBody, err := ioutil.ReadAll(c.Request.Body)
+			if err != nil {
+				c.Error(errors.Wrap(err, "can't read request body"))
+			}
+			//responseBody, err :=
+			entry.WithField("requestBody", string(requestBody)).Error(c.Errors.ByType(gin.ErrorTypePrivate).String())
 		} else {
-			msg := fmt.Sprintf("%s - %s [%s] \"%s %s\" %d %d \"%s\" \"%s\" (%dms)", clientIP, hostname, time.Now().Format(timeFormat), c.Request.Method, path, statusCode, dataLength, referer, clientUserAgent, latency)
+			//msg := fmt.Sprintf("%s - %s [%s] \"%s %s\" %d %d \"%s\" \"%s\" (%dms)", clientIP, hostname, time.Now().Format(timeFormat), c.Request.Method, path, statusCode, dataLength, referer, clientUserAgent, latency)
+			msg := ""
+			if path == "/favicon.ico" {return}
 			if statusCode > 499 {
 				entry.Error(msg)
 			} else if statusCode > 399 {
