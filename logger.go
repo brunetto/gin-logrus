@@ -1,6 +1,7 @@
 package ginlogrus
 
 import (
+	"bytes"
 	"math"
 	"os"
 	"time"
@@ -25,6 +26,14 @@ func Logger(log *logrus.Logger) gin.HandlerFunc {
 		// other handler can change c.Path so:
 		path := c.Request.URL.Path
 		start := time.Now()
+
+		// Record request
+		requestBody, err := ioutil.ReadAll(c.Request.Body)
+		if err != nil {
+			c.Error(errors.Wrap(err, "can't read request body"))
+		}
+		c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(requestBody))
+
 		c.Next()
 		stop := time.Since(start)
 		latency := int(math.Ceil(float64(stop.Nanoseconds()) / 1000.0))
@@ -51,18 +60,13 @@ func Logger(log *logrus.Logger) gin.HandlerFunc {
 			"referer":    referer,
 			"dataLength": responseDataLength,
 			"at": c.Keys["at"],
+			"requestBody": string(requestBody),
 			//"userAgent":  clientUserAgent,
 		})
 
 		if len(c.Errors) > 0 {
-			requestBody, err := ioutil.ReadAll(c.Request.Body)
-			if err != nil {
-				c.Error(errors.Wrap(err, "can't read request body"))
-			}
-			//responseBody, err :=
-			entry.WithField("requestBody", string(requestBody)).Error(c.Errors.ByType(gin.ErrorTypePrivate).String())
+			entry.Error(c.Errors.ByType(gin.ErrorTypePrivate).String())
 		} else {
-			//msg := fmt.Sprintf("%s - %s [%s] \"%s %s\" %d %d \"%s\" \"%s\" (%dms)", clientIP, hostname, time.Now().Format(timeFormat), c.Request.Method, path, statusCode, dataLength, referer, clientUserAgent, latency)
 			msg := ""
 			if path == "/favicon.ico" {return}
 			if statusCode > 499 {
