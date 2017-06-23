@@ -1,12 +1,9 @@
 package ginlogrus
 
 import (
-	"bytes"
 	"math"
 	"os"
 	"time"
-	"io/ioutil"
-	"github.com/pkg/errors"
 
 	"github.com/Sirupsen/logrus"
 	"gopkg.in/gin-gonic/gin.v1"
