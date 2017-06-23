@@ -10,6 +10,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"gopkg.in/gin-gonic/gin.v1"
+	"gitlab.com/brunetto/hang"
 )
 
 // 2016-09-27 09:38:21.541541811 +0200 CEST
@@ -23,18 +24,22 @@ var timeFormat = "2006-01-02T15:04:05-0700"
 // Logger is the logrus logger handler
 func Logger(log *logrus.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// before handle actions
+		var (
+			requestBody []byte
+			err error
+		)
+
 		// other handler can change c.Path so:
 		path := c.Request.URL.Path
 		start := time.Now()
 
 		// Record request
-		requestBody, err := ioutil.ReadAll(c.Request.Body)
-		if err != nil {
-			c.Error(errors.Wrap(err, "can't read request body"))
-		}
-		c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(requestBody))
+		requestBody = hang.Tee(&(c.Request.Body))
 
-		c.Next()
+		c.Next() // here handlers are executed
+
+		// after handle actions
 		stop := time.Since(start)
 		latency := int(math.Ceil(float64(stop.Nanoseconds()) / 1000.0))
 		statusCode := c.Writer.Status()
