@@ -7,9 +7,10 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"gopkg.in/gin-gonic/gin.v1"
-	"gitlab.com/brunetto/hang"
 	"bytes"
 	"strings"
+	"io"
+	"io/ioutil"
 )
 
 // 2016-09-27 09:38:21.541541811 +0200 CEST
@@ -58,7 +59,7 @@ func Logger(log *logrus.Logger) gin.HandlerFunc {
 		start := time.Now()
 
 		// Record request
-		requestBody = hang.Tee(&(c.Request.Body))
+		requestBody = Tee(&(c.Request.Body))
 
 		// Record response
 		responseBody := &RespBodyLogger{body: bytes.NewBufferString(""), ResponseWriter: c.Writer}
@@ -128,4 +129,11 @@ func Logger(log *logrus.Logger) gin.HandlerFunc {
 			}
 		}
 	}
+}
+
+func Tee(httpReqBody *io.ReadCloser) []byte {
+	var b []byte
+	b, _ = ioutil.ReadAll(*httpReqBody)
+	*httpReqBody = ioutil.NopCloser(bytes.NewBuffer(b))
+	return b
 }
