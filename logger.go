@@ -1,24 +1,18 @@
 package ginlogrus
 
 import (
+	"bytes"
+	"encoding/json"
+	"io"
+	"io/ioutil"
 	"math"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/Sirupsen/logrus"
 	"gopkg.in/gin-gonic/gin.v1"
-	"bytes"
-	"strings"
-	"io"
-	"io/ioutil"
-	"encoding/json"
 )
-
-// 2016-09-27 09:38:21.541541811 +0200 CEST
-// 127.0.0.1 - frank [10/Oct/2000:13:55:36 -0700]
-// "GET /apache_pb.gif HTTP/1.0" 200 2326
-// "http://www.example.com/start.html"
-// "Mozilla/4.08 [en] (Win98; I ;Nav)"
 
 // LogRequest activate the request body logging
 var LogRequest = true
@@ -81,7 +75,7 @@ func Logger(log *logrus.Logger) gin.HandlerFunc {
 			"path":       path,
 			"referer":    referer,
 			"dataLength": responseDataLength,
-			"at": c.Keys["at"],
+			"at":         c.Keys["at"],
 		})
 
 		// log the request body if desired
@@ -113,7 +107,9 @@ func Logger(log *logrus.Logger) gin.HandlerFunc {
 			entry.Error(c.Errors.ByType(gin.ErrorTypePrivate).String())
 		} else {
 			msg := ""
-			if path == "/favicon.ico" {return}
+			if path == "/favicon.ico" {
+				return
+			}
 			if statusCode > 499 {
 				entry.Error(msg)
 			} else if statusCode > 399 {
@@ -124,7 +120,6 @@ func Logger(log *logrus.Logger) gin.HandlerFunc {
 		}
 	}
 }
-
 
 // ExcludeRespBodyLog excludes some standard paths response body from being logged
 func ExcludeRespBodyLog(path string) bool {
