@@ -10,10 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/gin-gonic/gin"
-	//"gopkg.in/gin-gonic/gin.v1"
-
 )
 
 // LogRequest activate the request body logging
